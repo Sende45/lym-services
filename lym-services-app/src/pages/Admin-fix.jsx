@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
-import { collection, getDocs, addDoc, serverTimestamp, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+import { 
+  collection, getDocs, addDoc, serverTimestamp, 
+  deleteDoc, doc, query, orderBy, updateDoc, where 
+} from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
@@ -9,15 +12,19 @@ function Admin() {
   const [reservations, setReservations] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [consultations, setConsultations] = useState([]);
-  const [articles, setArticles] = useState([]); // État pour la liste des articles
+  const [articles, setArticles] = useState([]);
   const [newPost, setNewPost] = useState({ titre: "", contenu: "", image: "" });
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        fetchData();
+        // On charge les données spécifiquement pour cette agence
+        fetchData(currentUser.uid);
       } else {
         navigate("/login");
       }
@@ -25,32 +32,65 @@ function Admin() {
     return () => unsubscribe();
   }, [navigate]);
 
-  const fetchData = async () => {
-    // Récupérer les réservations
-    const resSnap = await getDocs(collection(db, "reservations"));
-    setReservations(resSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+  // --- MODIFICATION MULTI-AGENCES : Requêtes avec filtre agencyId ---
+  const fetchData = async (agencyId) => {
+    setLoading(true);
+    try {
+      // On ne récupère que les documents appartenant à l'agence connectée
+      const qRes = query(collection(db, "reservations"), where("agencyId", "==", agencyId));
+      const qCont = query(collection(db, "contacts"), where("agencyId", "==", agencyId));
+      const qCons = query(collection(db, "consultations"), where("agencyId", "==", agencyId));
+      const qArt = query(collection(db, "articles"), 
+                         where("agencyId", "==", agencyId), 
+                         orderBy("date", "desc"));
+
+      const [resSnap, contSnap, consSnap, artSnap] = await Promise.all([
+        getDocs(qRes), getDocs(qCont), getDocs(qCons), getDocs(qArt)
+      ]);
+
+      setReservations(resSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setContacts(contSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setConsultations(consSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setArticles(artSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Erreur SaaS Multi-Agences:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- MODIFICATION AUTOMATISATION : Notification Email ---
+  const triggerNotification = (clientData, status) => {
+    // Simulation d'envoi d'email/SMS
+    console.log(`Notification automatique : Envoyé à ${clientData.nom} (${clientData.email || 'Pas d\'email'}). Nouveau statut : ${status}`);
     
-    // Récupérer les messages de contact
-    const contSnap = await getDocs(collection(db, "contacts"));
-    setContacts(contSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    // Si tu installes EmailJS, tu insères le code ici :
+    // emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", { to_name: clientData.nom, status: status, to_email: clientData.email });
+  };
 
-    // Récupérer les demandes de consultation payante
-    const consSnap = await getDocs(collection(db, "consultations"));
-    setConsultations(consSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+  const handleUpdateStatus = async (collectionName, id, newStatus, clientData) => {
+    try {
+      await updateDoc(doc(db, collectionName, id), { statut: newStatus });
+      
+      // Déclenche l'automatisation si le statut change
+      triggerNotification(clientData, newStatus);
 
-    // Récupérer les articles du blog triés par date
-    const artQuery = query(collection(db, "articles"), orderBy("date", "desc"));
-    const artSnap = await getDocs(artQuery);
-    setArticles(artSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      // Mise à jour locale pour la fluidité UI
+      if (collectionName === "consultations") {
+        setConsultations(prev => prev.map(c => c.id === id ? {...c, statut: newStatus} : c));
+      }
+    } catch (err) {
+      alert("Erreur lors de la mise à jour");
+    }
   };
 
   const handleDelete = async (collectionName, id) => {
     if (window.confirm("Supprimer cet élément définitivement ?")) {
       try {
         await deleteDoc(doc(db, collectionName, id));
-        fetchData(); 
+        fetchData(user.uid);
       } catch (err) {
-        alert("Erreur lors de la suppression");
+        alert("Erreur suppression");
       }
     }
   };
@@ -60,105 +100,108 @@ function Admin() {
     try {
       await addDoc(collection(db, "articles"), {
         ...newPost,
+        agencyId: user.uid, // Signature Multi-Agences
         date: serverTimestamp(),
       });
-      alert("Article publié sur le blog !");
+      alert("Article publié pour votre agence !");
       setNewPost({ titre: "", contenu: "", image: "" });
-      fetchData(); // Rafraîchir la liste après publication
+      fetchData(user.uid);
     } catch (err) {
       alert("Erreur de publication");
     }
   };
 
-  if (!user) return <div style={{padding: "50px", textAlign: "center"}}>Vérification de l'accès...</div>;
+  // --- LOGIQUE DE RECHERCHE FILTRÉE ---
+  const filteredReservations = reservations.filter(r => 
+    r.nomClient?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const filteredConsultations = consultations.filter(c => 
+    c.nom?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) return <div style={loaderStyle}>Espace Agence Sécurisé...</div>;
 
   return (
-    <div style={{ padding: "40px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
-        <h1 style={{ color: "#1e293b" }}>Tableau de Bord LYM SERVICES</h1>
-        <button onClick={() => signOut(auth)} style={logoutBtn}>Déconnexion</button>
+    <div style={containerStyle}>
+      <header style={headerStyle}>
+        <div style={{ flex: 1 }}>
+          <h1 style={titleStyle}>LYM Business Cloud</h1>
+          <p style={subtitleStyle}>Agence ID: {user?.uid.substring(0,8)}... | {user?.email}</p>
+          <input 
+            type="text" 
+            placeholder="Rechercher un dossier client..." 
+            style={searchBar}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <button onClick={() => signOut(auth)} style={logoutBtn}>Quitter l'agence</button>
+      </header>
+
+      {/* STATS RÉELLES DE L'AGENCE */}
+      <div style={statRow}>
+        <div style={statCard}><h3>{reservations.length}</h3><p>Mes Réservations</p></div>
+        <div style={statCard}><h3>{consultations.length}</h3><p>Mes Consultations</p></div>
+        <div style={statCard}><h3>{articles.length}</h3><p>Mes Articles</p></div>
       </div>
 
-      <div style={adminGrid}>
-        {/* COLONNE GAUCHE : FLUX DE DONNÉES */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
-          
-          {/* SECTION CONSULTATIONS PAYANTES */}
-          <section style={{...adminSection, borderTop: "5px solid #f59e0b"}}>
-            <h2 style={{color: "#b45309"}}>💳 Consultations Payantes</h2>
-            {consultations.length === 0 && <p>Aucune demande.</p>}
-            {consultations.map(con => (
-              <div key={con.id} style={itemCard}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <p><strong>{con.nom}</strong> - <span style={badgeStyle}>{con.prix || "15 000 FCFA"}</span></p>
-                  <button onClick={() => handleDelete("consultations", con.id)} style={deleteBtn}>X</button>
+      <div style={dashboardGrid}>
+        <div style={stackStyle}>
+          {/* CONSULTATIONS AVEC AUTOMATISATION */}
+          <section style={{...sectionStyle, borderTop: "4px solid #f59e0b"}}>
+            <h2 style={sectionTitle}>💳 Consultations & Paiements</h2>
+            <div style={listContainer}>
+              {filteredConsultations.map(con => (
+                <div key={con.id} style={cardStyle}>
+                  <div style={cardHeader}>
+                    <select 
+                      style={statusBadge(con.statut)}
+                      value={con.statut || "En attente"}
+                      onChange={(e) => handleUpdateStatus("consultations", con.id, e.target.value, con)}
+                    >
+                      <option value="En attente">En attente</option>
+                      <option value="Payé">Payé (Notif Auto)</option>
+                      <option value="Terminé">Terminé (Notif Auto)</option>
+                    </select>
+                    <button onClick={() => handleDelete("consultations", con.id)} style={deleteBtn}>✕</button>
+                  </div>
+                  <p><strong>{con.nom}</strong></p>
+                  <p style={cardDetail}>{con.email || "Pas d'email"}</p>
                 </div>
-                <p style={{fontSize: "13px", margin: "5px 0"}}>Type: {con.type} | Statut: <strong>{con.statut}</strong></p>
-              </div>
-            ))}
-          </section>
-          
-          {/* SECTION RÉSERVATIONS */}
-          <section style={adminSection}>
-            <h2>📅 Réservations Reçues</h2>
-            {reservations.length === 0 && <p>Aucune réservation.</p>}
-            {reservations.map(res => (
-              <div key={res.id} style={itemCard}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <p><strong>{res.nomClient}</strong> - {res.offreChoisie}</p>
-                  <button onClick={() => handleDelete("reservations", res.id)} style={deleteBtn}>X</button>
-                </div>
-                <small>{res.telephone}</small>
-              </div>
-            ))}
+              ))}
+            </div>
           </section>
 
-          {/* SECTION CONTACTS */}
-          <section style={adminSection}>
-            <h2>✉️ Messages de Contact</h2>
-            {contacts.length === 0 && <p>Aucun message.</p>}
-            {contacts.map(cont => (
-              <div key={cont.id} style={itemCard}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <p><strong>{cont.nom}</strong> ({cont.sujet})</p>
-                  <button onClick={() => handleDelete("contacts", cont.id)} style={deleteBtn}>X</button>
+          <section style={sectionStyle}>
+            <h2 style={sectionTitle}>📅 Réservations Agence</h2>
+            {filteredReservations.map(res => (
+              <div key={res.id} style={cardStyle}>
+                <div style={cardHeader}>
+                  <p><strong>{res.nomClient}</strong></p>
+                  <button onClick={() => handleDelete("reservations", res.id)} style={deleteBtn}>✕</button>
                 </div>
-                <p style={{ fontSize: "14px", margin: "5px 0" }}>{cont.message}</p>
+                <p style={cardDetail}>{res.offreChoisie}</p>
               </div>
             ))}
           </section>
         </div>
 
-        {/* COLONNE DROITE : GESTION DU BLOG */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
-          
-          {/* FORMULAIRE DE PUBLICATION */}
-          <section style={adminSection}>
-            <h2>✍️ Publier un Article</h2>
-            <form onSubmit={handlePostBlog} style={adminForm}>
-              <input type="text" placeholder="Titre de l'article" value={newPost.titre} onChange={e => setNewPost({...newPost, titre: e.target.value})} required style={adminInput}/>
-              <textarea placeholder="Contenu de l'article" value={newPost.contenu} onChange={e => setNewPost({...newPost, contenu: e.target.value})} required style={adminTextArea}/>
-              <input type="text" placeholder="URL de l'image" value={newPost.image} onChange={e => setNewPost({...newPost, image: e.target.value})} style={adminInput}/>
-              <button type="submit" style={publishBtn}>Publier sur le site</button>
+        <div style={stackStyle}>
+          <section style={sectionStyle}>
+            <h2 style={sectionTitle}>✍️ Publier sur le Blog Agence</h2>
+            <form onSubmit={handlePostBlog} style={formStyle}>
+              <input type="text" placeholder="Titre" value={newPost.titre} onChange={e => setNewPost({...newPost, titre: e.target.value})} required style={inputStyle}/>
+              <textarea placeholder="Contenu..." value={newPost.contenu} onChange={e => setNewPost({...newPost, contenu: e.target.value})} required style={textAreaStyle}/>
+              <button type="submit" style={publishBtn}>Publier l'article</button>
             </form>
           </section>
 
-          {/* LISTE DE SUPPRESSION DES ARTICLES */}
-          <section style={{...adminSection, borderTop: "5px solid #ef4444"}}>
-            <h2 style={{color: "#b91c1c"}}>🗑️ Supprimer des Articles</h2>
-            {articles.length === 0 && <p>Aucun article publié.</p>}
-            <div style={{maxHeight: "400px", overflowY: "auto"}}>
-              {articles.map(art => (
-                <div key={art.id} style={{...itemCard, display: "flex", alignItems: "center", gap: "10px"}}>
-                  <img src={art.image} alt="" style={{width: "40px", height: "40px", borderRadius: "4px", objectFit: "cover"}} />
-                  <div style={{flex: 1}}>
-                    <p style={{margin: 0, fontSize: "14px", fontWeight: "bold"}}>{art.titre}</p>
-                    <small style={{color: "#64748b"}}>Publié le {art.date?.toDate().toLocaleDateString()}</small>
-                  </div>
-                  <button onClick={() => handleDelete("articles", art.id)} style={deleteBadgeBtn}>Supprimer</button>
-                </div>
-              ))}
-            </div>
+          <section style={sectionStyle}>
+            <h2 style={sectionTitle}>✉️ Messages Reçus</h2>
+            {contacts.map(cont => (
+              <div key={cont.id} style={cardStyle}>
+                <p><strong>{cont.nom}</strong>: {cont.message}</p>
+              </div>
+            ))}
           </section>
         </div>
       </div>
@@ -166,17 +209,33 @@ function Admin() {
   );
 }
 
-// STYLES
-const badgeStyle = { backgroundColor: "#fef3c7", color: "#92400e", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: "bold" };
-const adminGrid = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px" };
-const adminSection = { backgroundColor: "white", padding: "20px", borderRadius: "15px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" };
-const itemCard = { padding: "15px", borderBottom: "1px solid #edf2f7", marginBottom: "10px", position: "relative" };
-const adminForm = { display: "flex", flexDirection: "column", gap: "10px" };
-const adminInput = { padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" };
-const adminTextArea = { ...adminInput, height: "120px", resize: "none" };
-const publishBtn = { backgroundColor: "#10b981", color: "white", padding: "12px", border: "none", borderRadius: "8px", fontWeight: "bold", cursor: "pointer" };
-const logoutBtn = { backgroundColor: "#ef4444", color: "white", padding: "8px 16px", border: "none", borderRadius: "8px", cursor: "pointer" };
-const deleteBtn = { color: "#ef4444", border: "none", background: "none", cursor: "pointer", fontWeight: "bold" };
-const deleteBadgeBtn = { backgroundColor: "#fee2e2", color: "#ef4444", border: "none", padding: "5px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "bold" };
+// --- STYLES (Conservés et ajustés) ---
+const searchBar = { width: "100%", maxWidth: "400px", padding: "12px", borderRadius: "10px", border: "1px solid #e2e8f0", marginTop: "10px", outline: "none" };
+const statRow = { display: "flex", gap: "20px", marginBottom: "30px" };
+const statCard = { flex: 1, backgroundColor: "white", padding: "20px", borderRadius: "20px", textAlign: "center", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" };
+const statusBadge = (status) => ({
+  backgroundColor: status === "Terminé" ? "#dcfce7" : status === "Payé" ? "#dbeafe" : "#fef3c7",
+  color: status === "Terminé" ? "#166534" : status === "Payé" ? "#1e40af" : "#92400e",
+  border: "none", padding: "5px 10px", borderRadius: "10px", fontWeight: "bold", cursor: "pointer"
+});
+const containerStyle = { padding: "30px", backgroundColor: "#f1f5f9", minHeight: "100vh", fontFamily: "sans-serif" };
+const headerStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", backgroundColor: "white", padding: "25px", borderRadius: "20px" };
+const titleStyle = { margin: 0, fontSize: "22px", fontWeight: "800" };
+const subtitleStyle = { fontSize: "12px", color: "#64748b", margin: "5px 0" };
+const dashboardGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "30px" };
+const stackStyle = { display: "flex", flexDirection: "column", gap: "30px" };
+const sectionStyle = { backgroundColor: "white", padding: "25px", borderRadius: "20px" };
+const sectionTitle = { fontSize: "17px", fontWeight: "bold", marginBottom: "20px" };
+const cardStyle = { padding: "15px", backgroundColor: "#f8fafc", borderRadius: "15px", marginBottom: "10px", border: "1px solid #e2e8f0" };
+const cardHeader = { display: "flex", justifyContent: "space-between", alignItems: "center" };
+const cardDetail = { fontSize: "13px", color: "#64748b" };
+const deleteBtn = { background: "none", border: "none", color: "#94a3b8", cursor: "pointer" };
+const formStyle = { display: "flex", flexDirection: "column", gap: "10px" };
+const inputStyle = { padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" };
+const textAreaStyle = { ...inputStyle, height: "80px" };
+const publishBtn = { backgroundColor: "#2563eb", color: "white", padding: "12px", border: "none", borderRadius: "8px", fontWeight: "bold", cursor: "pointer" };
+const logoutBtn = { backgroundColor: "#fee2e2", color: "#ef4444", padding: "10px 20px", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
+const loaderStyle = { height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" };
+const listContainer = { maxHeight: "400px", overflowY: "auto" };
 
 export default Admin;
