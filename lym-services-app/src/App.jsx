@@ -7,7 +7,7 @@ import Terrains from "./pages/Terrains"; // Corrigé : Ajout du 's' pour corresp
 import Contact from "./pages/Contact";
 import Blog from "./pages/Blog";
 import { db } from "./firebase"; // Corrigé : "./firebase" car le fichier est dans le même dossier
-import Admin from "./pages/Admin";
+import Admin from "./pages/Admin-fix";
 import Login from "./pages/Login";
 import Consultation from "./pages/Consultation";
 
