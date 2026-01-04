@@ -22,16 +22,40 @@ function NosOffres() {
 
   const continents = ["Tous", "Afrique", "Europe", "Amérique", "Asie", "Océanie"];
 
-  // Simulation de base de données par continent (remplace les offres fixes)
+  // --- BASE DE DONNÉES AVEC IMAGES STABLES ET OPTIMISÉES ---
   const offresParContinent = [
-    { id: "af", nom: "Afrique", basePrix: 350000, img: "https://images.unsplash.com/photo-1523805081446-ed9a99a2c70f?w=800" },
-    { id: "eu", nom: "Europe", basePrix: 650000, img: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800" },
-    { id: "am", nom: "Amérique", basePrix: 950000, img: "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=800" },
-    { id: "as", nom: "Asie", basePrix: 800000, img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800" },
-    { id: "oc", nom: "Océanie", basePrix: 1200000, img: "https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800" }
+    { 
+      id: "af", 
+      nom: "Afrique", 
+      basePrix: 350000, 
+      img: "https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=800&auto=format&fit=crop" 
+    },
+    { 
+      id: "eu", 
+      nom: "Europe", 
+      basePrix: 650000, 
+      img: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?q=80&w=800&auto=format&fit=crop" 
+    },
+    { 
+      id: "am", 
+      nom: "Amérique", 
+      basePrix: 950000, 
+      img: "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?q=80&w=800&auto=format&fit=crop" 
+    },
+    { 
+      id: "as", 
+      nom: "Asie", 
+      basePrix: 800000, 
+      img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop" 
+    },
+    { 
+      id: "oc", 
+      nom: "Océanie", 
+      basePrix: 1200000, 
+      img: "https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?q=80&w=800&auto=format&fit=crop" 
+    }
   ];
 
-  // Calcul dynamique du prix selon le type de visa
   const calculerPrixTotal = (base, type) => {
     const multiplicateurs = { "Études": 1.5, "Travail": 2.0, "Immigration": 2.5, "Affaires": 1.2 };
     return base * (multiplicateurs[type] || 1);
@@ -67,7 +91,6 @@ function NosOffres() {
         <p style={subtitleStyle}>Choisissez n'importe quel pays, nous gérons la procédure</p>
       </section>
 
-      {/* NOUVEAU FORMULAIRE DE RECHERCHE MONDIAL */}
       <div style={{...searchWrapper, padding: isMobile ? "0 15px" : "0 10%"}}>
         <div style={searchFormCard}>
           <div style={{display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "20px", width: "100%"}}>
@@ -114,53 +137,52 @@ function NosOffres() {
         </div>
       </div>
 
-      {/* GRILLE PAR ZONE GÉOGRAPHIQUE */}
       <div style={{...gridStyle, padding: isMobile ? "30px 20px" : "40px 10%"}}>
         {offresParContinent
           .filter(o => continentFilter === "Tous" || o.nom === continentFilter)
           .map((zone) => (
           <div key={zone.id} style={cardStyle}>
-            <img src={zone.img} alt={zone.nom} style={imgStyle} />
+            <div style={{overflow: 'hidden', height: '180px'}}>
+               <img src={zone.img} alt={zone.nom} style={imgStyle} />
+            </div>
             <div style={{ padding: "20px" }}>
               <div style={cardTop}>
                 <h3 style={{ margin: 0 }}>Zone {zone.nom}</h3>
                 <span style={priceTag}>Dès {calculerPrixTotal(zone.basePrix, typeVisaFilter).toLocaleString()} FCFA</span>
               </div>
               <p style={{fontSize: "13px", color: "#64748b", marginBottom: "15px"}}>
-                Tarif incluant l'assistance pour visa <strong>{typeVisaFilter}</strong> vers n'importe quel pays de cette zone.
+                Assistance visa <strong>{typeVisaFilter}</strong> pour tous les pays en {zone.nom}.
               </p>
               <button 
                 onClick={() => { setSelectedOffre(zone); setIsModalOpen(true); }} 
                 style={btnDetails}
                 disabled={!paysSelectionne}
               >
-                {paysSelectionne ? `Partir en ${paysSelectionne}` : "Indiquez un pays pour continuer"}
+                {paysSelectionne ? `Partir en ${paysSelectionne}` : "Entrez un pays pour continuer"}
               </button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* MODALE DE PAIEMENT / RÉSERVATION */}
       {isModalOpen && (
         <div style={modalOverlay}>
           <div style={modalContent}>
             <div style={{padding: "30px"}}>
               <div style={{display:'flex', justifyContent:'space-between', marginBottom: "20px"}}>
-                <h2>Confirmation : {paysSelectionne}</h2>
+                <h2 style={{fontSize: '20px'}}>Confirmation : {paysSelectionne}</h2>
                 <button onClick={() => setIsModalOpen(false)} style={{border:'none', background:'none', cursor:'pointer'}}><X/></button>
               </div>
-              <p>Type : <strong>{typeVisaFilter} ({dureeFilter})</strong></p>
-              <p>Zone : <strong>{selectedOffre.nom}</strong></p>
-              <div style={{backgroundColor: "#eff6ff", padding: "15px", borderRadius: "10px", margin: "20px 0"}}>
-                <span style={{fontSize: "14px", color: "#2563eb"}}>Estimation du service :</span>
-                <div style={{fontSize: "24px", fontWeight: "900", color: "#1e40af"}}>
+              <p style={{fontSize: '14px', marginBottom: '5px'}}>Visa : <strong>{typeVisaFilter}</strong></p>
+              <div style={{backgroundColor: "#eff6ff", padding: "15px", borderRadius: "10px", margin: "15px 0"}}>
+                <span style={{fontSize: "13px", color: "#2563eb"}}>Service estimé :</span>
+                <div style={{fontSize: "22px", fontWeight: "900", color: "#1e40af"}}>
                   {calculerPrixTotal(selectedOffre.basePrix, typeVisaFilter).toLocaleString()} FCFA
                 </div>
               </div>
-              <form onSubmit={handleReservation} style={{display: "flex", flexDirection: "column", gap: "10px"}}>
-                <input type="text" placeholder="Votre Nom complet" style={fInput} required />
-                <button type="submit" style={btnConfirm}>Valider et obtenir le devis final</button>
+              <form onSubmit={handleReservation} style={{display: "flex", flexDirection: "column", gap: "12px"}}>
+                <input type="text" placeholder="Nom complet" style={fInput} required />
+                <button type="submit" style={btnConfirm}>Valider ma demande</button>
               </form>
             </div>
           </div>
@@ -180,14 +202,14 @@ const inputBox = { display: "flex", flexDirection: "column", gap: "5px" };
 const labelS = { fontSize: "11px", fontWeight: "800", color: "#64748b", textTransform: "uppercase" };
 const innerInput = { display: "flex", alignItems: "center", gap: "10px", border: "1px solid #e2e8f0", padding: "12px", borderRadius: "10px" };
 const cleanInput = { border: "none", outline: "none", width: "100%", fontSize: "14px" };
-const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "25px" };
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "25px" };
 const cardStyle = { backgroundColor: "white", borderRadius: "24px", overflow: "hidden", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" };
-const imgStyle = { width: "100%", height: "180px", objectFit: "cover" };
+const imgStyle = { width: "100%", height: "100%", objectFit: "cover", transition: '0.3s ease' };
 const cardTop = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" };
 const priceTag = { color: "#2563eb", fontWeight: "900", fontSize: "16px" };
 const btnDetails = { width: "100%", backgroundColor: "#2563eb", color: "white", padding: "14px", border: "none", borderRadius: "14px", fontWeight: "700", cursor: "pointer" };
 const modalOverlay = { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.7)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 };
-const modalContent = { backgroundColor: "white", borderRadius: "28px", width: "90%", maxWidth: "500px" };
+const modalContent = { backgroundColor: "white", borderRadius: "28px", width: "90%", maxWidth: "450px" };
 const fInput = { padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" };
 const btnConfirm = { backgroundColor: "#2563eb", color: "white", padding: "16px", borderRadius: "14px", border: "none", fontWeight: "700", cursor: "pointer" };
 
