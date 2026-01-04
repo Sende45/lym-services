@@ -1,0 +1,55 @@
+/* Style pour tous les liens de navigation */
+nav a {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Effet au survol : fond bleu clair et texte bleu */
+nav a:hover {
+  background-color: #eff6ff !important; /* Bleu très clair */
+  color: #2563eb !important;
+}
+
+/* Si le bouton est déjà actif (cliqué), on garde le bleu foncé */
+nav a.active {
+  background-color: #2563eb !important;
+  color: white !important;
+} 
+
+/* Bouton "Découvrir nos offres" (Blanc initialement) */
+.btn-hero-white {
+  padding: 15px 30px;
+  border-radius: 10px;
+  border: none;
+  background-color: #ffffff;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Inversion au clic : Devient Bleu, écriture Blanche */
+.btn-hero-white:active {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  transform: scale(0.95);
+  border: 2px solid #ffffff; /* Pour bien voir le bouton sur le Hero */
+}
+
+/* Bouton "Nous contacter" (Outline initialement) */
+.btn-hero-outline {
+  padding: 15px 30px;
+  border-radius: 10px;
+  border: 2px solid #ffffff;
+  background-color: transparent;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Inversion au clic : Devient Blanc, écriture Bleue */
+.btn-hero-outline:active {
+  background-color: #ffffff !important;
+  color: #2563eb !important;
+  transform: scale(0.95);
+}
