@@ -3,16 +3,15 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyApI15ym42HUeuLWc5yfUpPoUzBHD0jeI8",
+  authDomain: "lym-services.firebaseapp.com",
+  projectId: "lym-services",
+  storageBucket: "lym-services.appspot.com",
+  messagingSenderId: "61327418530",
+  appId: "1:61327418530:web:dd2be68b2e85e56586e3fb",
+  measurementId: "G-R4FXGS31CX",
 };
 
 const app = initializeApp(firebaseConfig);
-
 export const db = getFirestore(app);
 export const auth = getAuth(app);
