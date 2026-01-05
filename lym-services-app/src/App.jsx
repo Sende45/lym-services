@@ -10,6 +10,7 @@ import { db } from "./firebase"; // Corrigé : "./firebase" car le fichier est d
 import Admin from "./pages/Admin-fix";
 import Login from "./pages/Login";
 import Consultation from "./pages/Consultation";
+import AdminTarifs from "./pages/AdminTarifs";
 
 function App() {
   return (
@@ -25,6 +26,8 @@ function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/login" element={<Login />} />
           <Route path="/consultation" element={<Consultation />} />
+          <Route path="/admintarif" element={<AdminTarifs />} />
+
 
         </Routes>
       </div>
