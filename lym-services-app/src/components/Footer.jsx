@@ -17,7 +17,7 @@ function Footer() {
             <h3>Contact</h3>
             <p><MapPin size={16}/> Abidjan, Côte d'Ivoire</p>
             <p><Phone size={16}/> +225 07 97 43 68 95</p>
-            <p><Mail size={16}/> contact@lymservices.com</p>
+            <p><Mail size={16}/> lymglobalservices@gmail.com</p>
           </div>
           <div style={col}>
             <h3>Horaires d'ouverture</h3>
