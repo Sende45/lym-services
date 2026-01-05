@@ -107,8 +107,8 @@ function NosOffres() {
       `}</style>
 
       <section style={{...headerStyle, padding: isMobile ? "40px 20px 80px" : "60px 10% 100px"}}>
-        <h1 style={titleStyle}>Service Visa Mondial</h1>
-        <p style={subtitleStyle}>Tarification intelligente connectée à votre base de données</p>
+        <h1 style={titleStyle}>Service Visa LYM SERVICES</h1>
+        <p style={subtitleStyle}>TarificationS et confirmation demande </p>
       </section>
 
       {/* FORMULAIRE DE RECHERCHE */}
