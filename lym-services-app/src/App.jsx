@@ -6,7 +6,6 @@ import NosOffres from "./pages/NosOffres";
 import Terrains from "./pages/Terrains"; 
 import Contact from "./pages/Contact";
 import Blog from "./pages/Blog";
-// --- AJOUT DE L'IMPORT ICI ---
 import ArticleDetail from "./pages/ArticleDetail"; 
 import { db } from "./firebase"; 
 import Admin from "./pages/Admin-fix";
@@ -16,17 +15,17 @@ import AdminTarifs from "./pages/AdminTarifs";
 
 function App() {
   return (
-    <> 
+    <div className="flex flex-col min-h-screen">
+      {/* 1. Le Header reste en haut */}
       <Header />
-      <div style={{ paddingTop: "70px" }}>
+
+      {/* 2. Le contenu principal avec une marge forcée de 80px (mt-20) */}
+      <main className="flex-grow mt-20">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/offres" element={<NosOffres />} />
           <Route path="/blog" element={<Blog />} />
-          
-          {/* --- AJOUT DE LA ROUTE DYNAMIQUE ICI --- */}
           <Route path="/blog/:id" element={<ArticleDetail />} />
-          
           <Route path="/terrains" element={<Terrains />} /> 
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<Admin />} />
@@ -34,9 +33,11 @@ function App() {
           <Route path="/consultation" element={<Consultation />} />
           <Route path="/admintarif" element={<AdminTarifs />} />
         </Routes>
-      </div>
+      </main>
+
+      {/* 3. Le Footer en bas */}
       <Footer />
-    </>
+    </div>
   );
 }
 
