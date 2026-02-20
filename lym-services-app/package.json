@@ -15,7 +15,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.3.6",
     "@tailwindcss/vite": "^4.2.0",
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
     "framer-motion": "^12.34.2",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
