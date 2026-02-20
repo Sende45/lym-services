@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState } from "react"; // Ajout de useState
 import { NavLink } from "react-router-dom";
-import { Plane, CalendarCheck, LayoutDashboard } from "lucide-react";
+import { Plane, CalendarCheck, LayoutDashboard, Menu, X } from "lucide-react"; // Ajout de Menu et X
+import { motion, AnimatePresence } from "framer-motion"; // Pour une animation fluide
 
 function Header() {
+  const [isOpen, setIsOpen] = useState(false); // État pour le menu mobile
+
   // Style Elite pour les liens
   const navLinkClass = ({ isActive }) => 
     `relative flex items-center gap-2 px-3 py-2 font-bold text-[13px] uppercase tracking-wider transition-all duration-300 group ${
@@ -18,8 +21,15 @@ function Header() {
     }
   `;
 
+  const menuLinks = [
+    { name: "Accueil", path: "/" },
+    { name: "Offres", path: "/offres" },
+    { name: "Blog", path: "/blog" },
+    { name: "Contact", path: "/contact" }
+  ];
+
   return (
-    <header className="fixed top-0 left-0 right-0 h-20 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 z-[1000] flex items-center">
+    <header className="fixed top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 z-[1000] flex items-center">
       <div className="w-[92%] max-w-7xl mx-auto flex justify-between items-center">
         
         {/* LOGO ELITE */}
@@ -37,15 +47,10 @@ function Header() {
           </div>
         </NavLink>
         
-        {/* NAVIGATION */}
+        {/* NAVIGATION DESKTOP */}
         <nav className="hidden lg:flex items-center gap-6">
           <ul className="flex items-center gap-2">
-            {[
-              { name: "Accueil", path: "/" },
-              { name: "Offres", path: "/offres" },
-              { name: "Blog", path: "/blog" },
-              { name: "Contact", path: "/contact" }
-            ].map((link) => (
+            {menuLinks.map((link) => (
               <li key={link.path}>
                 <NavLink to={link.path} className={navLinkClass}>
                   {({ isActive }) => (
@@ -63,9 +68,7 @@ function Header() {
 
           <div className="h-8 w-[1px] bg-slate-200/80 mx-2" />
 
-          {/* BOUTON CONSULTATION FIXÉ */}
           <NavLink to="/consultation" className={consultBtnClass}>
-            {/* On utilise une fonction pour accéder à isActive de manière sécurisée */}
             {({ isActive }) => (
               <>
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_infinite] pointer-events-none"></span>
@@ -81,12 +84,43 @@ function Header() {
           </NavLink>
         </nav>
 
-        {/* MENU MOBILE ICONE */}
-        <button className="lg:hidden flex flex-col gap-1.5 items-end p-2">
-           <span className="w-7 h-1 bg-slate-900 rounded-full"></span>
-           <span className="w-5 h-1 bg-blue-600 rounded-full"></span>
+        {/* MENU MOBILE ICONE - MODIFIÉ */}
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="lg:hidden flex flex-col gap-1.5 items-end p-2 z-[1100]"
+        >
+          <span className={`h-1 bg-slate-900 rounded-full transition-all duration-300 ${isOpen ? "w-7 rotate-45 translate-y-2.5" : "w-7"}`}></span>
+          <span className={`h-1 bg-blue-600 rounded-full transition-all duration-300 ${isOpen ? "opacity-0" : "w-5"}`}></span>
+          <span className={`h-1 bg-slate-900 rounded-full transition-all duration-300 ${isOpen ? "w-7 -rotate-45 -translate-y-2.5" : "w-4"}`}></span>
         </button>
       </div>
+
+      {/* OVERLAY MENU MOBILE - AJOUTÉ */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-20 left-0 right-0 bg-white border-b border-slate-200 shadow-2xl p-6 lg:hidden flex flex-col gap-4 z-[999]"
+          >
+            {menuLinks.map((link) => (
+              <NavLink 
+                key={link.path} 
+                to={link.path} 
+                onClick={() => setIsOpen(false)}
+                className={navLinkClass}
+              >
+                {link.name}
+              </NavLink>
+            ))}
+            <hr className="border-slate-100" />
+            <NavLink to="/consultation" onClick={() => setIsOpen(false)} className={consultBtnClass}>
+              <CalendarCheck size={16} /> Consultation
+            </NavLink>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
