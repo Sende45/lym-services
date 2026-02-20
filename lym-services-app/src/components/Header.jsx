@@ -1,10 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Ajout de useEffect
 import { NavLink } from "react-router-dom";
 import { Plane, CalendarCheck, LayoutDashboard, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
+
+  // --- MODIF PRO : BLOQUER LE SCROLL QUAND LE MENU EST OUVERT ---
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [isOpen]);
 
   // Style Elite pour les liens
   const navLinkClass = ({ isActive }) => 
@@ -29,11 +38,11 @@ function Header() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-xl border-b border-slate-200/50 z-[1000] flex items-center">
+    <header className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-slate-200/50 z-[1000] flex items-center">
       <div className="w-[92%] max-w-7xl mx-auto flex justify-between items-center">
         
         {/* LOGO ELITE */}
-        <NavLink to="/" className="flex items-center gap-3 group z-[1100]">
+        <NavLink to="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3 group z-[1100]">
           <div className="relative p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-all duration-300">
             <Plane size={20} className="text-white" />
           </div>
@@ -47,7 +56,7 @@ function Header() {
           </div>
         </NavLink>
         
-        {/* NAVIGATION DESKTOP (cachée sur mobile) */}
+        {/* NAVIGATION DESKTOP */}
         <nav className="hidden lg:flex items-center gap-6">
           <ul className="flex items-center gap-2">
             {links.map((link) => (
@@ -78,7 +87,7 @@ function Header() {
           </NavLink>
         </nav>
 
-        {/* MENU MOBILE ICONE (visible uniquement sur mobile) */}
+        {/* MENU MOBILE ICONE */}
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className="lg:hidden p-2 text-slate-900 z-[1100]"
@@ -87,14 +96,14 @@ function Header() {
         </button>
       </div>
 
-      {/* RIDEAU MENU MOBILE (s'ouvre au clic) */}
+      {/* RIDEAU MENU MOBILE - MODIFIÉ POUR ÊTRE TOTALEMENT OPAQUE ET PRO */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
             className="fixed inset-0 bg-white z-[1050] flex flex-col p-8 pt-28 lg:hidden"
           >
             <div className="flex flex-col gap-6">
@@ -103,7 +112,7 @@ function Header() {
                   key={link.path} 
                   to={link.path} 
                   onClick={() => setIsOpen(false)}
-                  className="text-2xl font-black text-slate-900 hover:text-blue-600 transition-colors border-b border-slate-100 pb-4"
+                  className="text-3xl font-black text-slate-900 hover:text-blue-600 transition-colors border-b border-slate-50 pb-4 tracking-tighter"
                 >
                   {link.name}
                 </NavLink>
@@ -112,7 +121,7 @@ function Header() {
               <NavLink 
                 to="/consultation" 
                 onClick={() => setIsOpen(false)}
-                className="mt-4 flex items-center justify-center gap-3 bg-blue-600 text-white py-5 rounded-2xl font-black text-lg"
+                className="mt-4 flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-blue-100"
               >
                 <CalendarCheck size={20} /> Consultation
               </NavLink>
@@ -120,7 +129,7 @@ function Header() {
               <NavLink 
                 to="/login" 
                 onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center gap-3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold"
+                className="flex items-center justify-center gap-3 bg-slate-50 text-slate-600 py-4 rounded-2xl font-bold"
               >
                 <LayoutDashboard size={18} /> Espace Client
               </NavLink>

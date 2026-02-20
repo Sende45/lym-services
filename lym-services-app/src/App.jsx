@@ -15,20 +15,20 @@ import AdminTarifs from "./pages/AdminTarifs";
 
 function App() {
   return (
-    /* On utilise h-screen avec overflow-x-hidden pour éviter 
-       que le téléphone ne puisse scroller sur les côtés.
+    /* On utilise flex-col et min-h-screen pour que le footer soit toujours en bas.
+       overflow-x-clip empêche les débordements horizontaux tout en restant fluide.
     */
-    <div className="flex flex-col min-h-screen w-full overflow-x-hidden">
+    <div className="flex flex-col min-h-screen w-full overflow-x-clip bg-white">
       
-      {/* 1. Header en position fixe */}
+      {/* 1. Header en position fixe (z-index géré dans Header.js) */}
       <Header />
 
-      {/* MODIFICATION MAJEURE : 
-          - On remplace mt-20 par pt-20 (padding-top).
-          - Le padding-top crée un espace "physique" à l'intérieur du bloc.
-          - On s'assure que le contenu ne glisse jamais sous le header.
+      {/* MODIFICATION : 
+          - pt-20 (80px) match parfaitement avec le h-20 du header.
+          - On ajoute 'relative' pour que le flux de rendu soit propre.
+          - 'z-10' pour que les pages restent en dessous du header (z-1000).
       */}
-      <main className="flex-grow pt-20 md:pt-20">
+      <main className="flex-grow pt-20 relative z-10">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/offres" element={<NosOffres />} />
