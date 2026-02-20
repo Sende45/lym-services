@@ -18,13 +18,36 @@ function Contact() {
     e.preventDefault();
     setStatus("loading");
 
+    // --- AJOUT : TES COORDONNÉES ---
+    const monWhatsApp = "2250708072448"; 
+    const monEmail = "contact@lymsservices.com";
+
     try {
       await addDoc(collection(db, "contacts"), {
         ...formData,
         dateEnvoi: serverTimestamp(),
         lu: false
       });
+
+      // --- AJOUT : PRÉPARATION DES LIENS ---
+      const textWA = `Bonjour LYM Services, je suis ${formData.nom}.%0A*Sujet:* ${formData.sujet}%0A*Message:* ${formData.message}%0A*Email:* ${formData.email}`;
+      const whatsappUrl = `https://wa.me/${monWhatsApp}?text=${textWA}`;
+      
+      const mailtoUrl = `mailto:${monEmail}?subject=${encodeURIComponent(formData.sujet)}&body=${encodeURIComponent("Nom: " + formData.nom + "\nTel: " + formData.telephone + "\n\nMessage: " + formData.message)}`;
+
       setStatus("success");
+
+      // --- AJOUT : LOGIQUE DE REDIRECTION ---
+      setTimeout(() => {
+        // 1. Ouvre WhatsApp
+        window.open(whatsappUrl, "_blank");
+        
+        // 2. Déclenche l'email (optionnel, certains navigateurs bloquent le 2ème popup)
+        setTimeout(() => {
+          window.location.href = mailtoUrl;
+        }, 500);
+      }, 1000);
+
       setFormData({ nom: "", email: "", telephone: "", sujet: "Information Voyage", message: "" });
       setTimeout(() => setStatus(null), 5000);
     } catch (error) {
@@ -144,7 +167,7 @@ function Contact() {
               <AnimatePresence>
                 {status === "success" && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2 text-green-600 font-bold justify-center bg-green-50 p-4 rounded-xl">
-                    <CheckCircle2 size={20} /> Message envoyé avec succès !
+                    <CheckCircle2 size={20} /> Message envoyé ! Redirection vers WhatsApp...
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -200,7 +223,7 @@ function Contact() {
         <div className="max-w-7xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white">
           <iframe 
             title="Localisation Lyms Services"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15889.344443427908!2d-3.95!3d5.35!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMjEnMDAuMCJOIDPCsDU3JzAwLjAiVw!5e0!3m2!1sfr!2sci!4v1700000000000!5m2!1sfr!2sci" 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3972.33646561214!2d-3.9678825!3d5.3655556!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMjEnNTYuMCJOIDPCsDU4JzA0LjQiVw!5e0!3m2!1sfr!2sci!4v1620000000000!5m2!1sfr!2sci" 
             width="100%" 
             height="450" 
             style={{ border: 0 }} 
