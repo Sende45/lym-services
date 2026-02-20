@@ -1,10 +1,10 @@
-import React, { useState } from "react"; // Ajout de useState
+import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Plane, CalendarCheck, LayoutDashboard, Menu, X } from "lucide-react"; // Ajout de Menu et X
-import { motion, AnimatePresence } from "framer-motion"; // Pour une animation fluide
+import { Plane, CalendarCheck, LayoutDashboard, Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 function Header() {
-  const [isOpen, setIsOpen] = useState(false); // État pour le menu mobile
+  const [isOpen, setIsOpen] = useState(false);
 
   // Style Elite pour les liens
   const navLinkClass = ({ isActive }) => 
@@ -21,7 +21,7 @@ function Header() {
     }
   `;
 
-  const menuLinks = [
+  const links = [
     { name: "Accueil", path: "/" },
     { name: "Offres", path: "/offres" },
     { name: "Blog", path: "/blog" },
@@ -29,35 +29,35 @@ function Header() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 z-[1000] flex items-center">
+    <header className="fixed top-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-xl border-b border-slate-200/50 z-[1000] flex items-center">
       <div className="w-[92%] max-w-7xl mx-auto flex justify-between items-center">
         
         {/* LOGO ELITE */}
-        <NavLink to="/" className="flex items-center gap-3 group">
-          <div className="relative p-2.5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-            <Plane size={22} className="text-white" />
+        <NavLink to="/" className="flex items-center gap-3 group z-[1100]">
+          <div className="relative p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-all duration-300">
+            <Plane size={20} className="text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-[1000] text-slate-900 leading-none tracking-tighter">
+            <span className="text-lg md:text-xl font-[1000] text-slate-900 leading-none tracking-tighter">
               LYM<span className="text-blue-600 italic font-serif font-medium ml-0.5">Services</span>
             </span>
-            <span className="text-[8px] font-black text-blue-600/60 tracking-[0.2em] uppercase leading-none mt-1">
+            <span className="hidden md:block text-[8px] font-black text-blue-600/60 tracking-[0.2em] uppercase leading-none mt-1">
               International Business
             </span>
           </div>
         </NavLink>
         
-        {/* NAVIGATION DESKTOP */}
+        {/* NAVIGATION DESKTOP (cachée sur mobile) */}
         <nav className="hidden lg:flex items-center gap-6">
           <ul className="flex items-center gap-2">
-            {menuLinks.map((link) => (
+            {links.map((link) => (
               <li key={link.path}>
                 <NavLink to={link.path} className={navLinkClass}>
                   {({ isActive }) => (
                     <>
                       {link.name}
                       <span className={`absolute -bottom-1 left-3 right-3 h-[3px] rounded-full bg-blue-600 transition-all duration-500 transform origin-center ${
-                        isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0 group-hover:scale-x-50 group-hover:opacity-50"
+                        isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0 group-hover:scale-x-50"
                       }`} />
                     </>
                   )}
@@ -69,55 +69,62 @@ function Header() {
           <div className="h-8 w-[1px] bg-slate-200/80 mx-2" />
 
           <NavLink to="/consultation" className={consultBtnClass}>
-            {({ isActive }) => (
-              <>
-                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_infinite] pointer-events-none"></span>
-                <CalendarCheck size={16} className={isActive ? "" : "animate-bounce"} />
-                <span className="relative z-10">Consultation</span>
-                <span className="relative z-10 bg-black/20 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] ml-1">15k</span>
-              </>
-            )}
+            <CalendarCheck size={16} />
+            <span className="relative z-10">Consultation</span>
           </NavLink>
           
-          <NavLink to="/login" className="group ml-2 p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 transition-all duration-300">
+          <NavLink to="/login" className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-blue-600 transition-all">
             <LayoutDashboard size={18} />
           </NavLink>
         </nav>
 
-        {/* MENU MOBILE ICONE - MODIFIÉ */}
+        {/* MENU MOBILE ICONE (visible uniquement sur mobile) */}
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className="lg:hidden flex flex-col gap-1.5 items-end p-2 z-[1100]"
+          className="lg:hidden p-2 text-slate-900 z-[1100]"
         >
-          <span className={`h-1 bg-slate-900 rounded-full transition-all duration-300 ${isOpen ? "w-7 rotate-45 translate-y-2.5" : "w-7"}`}></span>
-          <span className={`h-1 bg-blue-600 rounded-full transition-all duration-300 ${isOpen ? "opacity-0" : "w-5"}`}></span>
-          <span className={`h-1 bg-slate-900 rounded-full transition-all duration-300 ${isOpen ? "w-7 -rotate-45 -translate-y-2.5" : "w-4"}`}></span>
+          {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
 
-      {/* OVERLAY MENU MOBILE - AJOUTÉ */}
+      {/* RIDEAU MENU MOBILE (s'ouvre au clic) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-20 left-0 right-0 bg-white border-b border-slate-200 shadow-2xl p-6 lg:hidden flex flex-col gap-4 z-[999]"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-0 bg-white z-[1050] flex flex-col p-8 pt-28 lg:hidden"
           >
-            {menuLinks.map((link) => (
+            <div className="flex flex-col gap-6">
+              {links.map((link) => (
+                <NavLink 
+                  key={link.path} 
+                  to={link.path} 
+                  onClick={() => setIsOpen(false)}
+                  className="text-2xl font-black text-slate-900 hover:text-blue-600 transition-colors border-b border-slate-100 pb-4"
+                >
+                  {link.name}
+                </NavLink>
+              ))}
+              
               <NavLink 
-                key={link.path} 
-                to={link.path} 
+                to="/consultation" 
                 onClick={() => setIsOpen(false)}
-                className={navLinkClass}
+                className="mt-4 flex items-center justify-center gap-3 bg-blue-600 text-white py-5 rounded-2xl font-black text-lg"
               >
-                {link.name}
+                <CalendarCheck size={20} /> Consultation
               </NavLink>
-            ))}
-            <hr className="border-slate-100" />
-            <NavLink to="/consultation" onClick={() => setIsOpen(false)} className={consultBtnClass}>
-              <CalendarCheck size={16} /> Consultation
-            </NavLink>
+
+              <NavLink 
+                to="/login" 
+                onClick={() => setIsOpen(false)}
+                className="flex items-center justify-center gap-3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold"
+              >
+                <LayoutDashboard size={18} /> Espace Client
+              </NavLink>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
