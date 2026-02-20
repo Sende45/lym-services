@@ -18,7 +18,7 @@ function Contact() {
     e.preventDefault();
     setStatus("loading");
 
-    // --- AJOUT : TES COORDONNÉES ---
+    // --- TES COORDONNÉES ---
     const monWhatsApp = "2250708072448"; 
     const monEmail = "contact@lymsservices.com";
 
@@ -29,7 +29,7 @@ function Contact() {
         lu: false
       });
 
-      // --- AJOUT : PRÉPARATION DES LIENS ---
+      // --- PRÉPARATION DES LIENS ---
       const textWA = `Bonjour LYM Services, je suis ${formData.nom}.%0A*Sujet:* ${formData.sujet}%0A*Message:* ${formData.message}%0A*Email:* ${formData.email}`;
       const whatsappUrl = `https://wa.me/${monWhatsApp}?text=${textWA}`;
       
@@ -37,12 +37,9 @@ function Contact() {
 
       setStatus("success");
 
-      // --- AJOUT : LOGIQUE DE REDIRECTION ---
+      // --- LOGIQUE DE REDIRECTION ---
       setTimeout(() => {
-        // 1. Ouvre WhatsApp
         window.open(whatsappUrl, "_blank");
-        
-        // 2. Déclenche l'email (optionnel, certains navigateurs bloquent le 2ème popup)
         setTimeout(() => {
           window.location.href = mailtoUrl;
         }, 500);
@@ -57,7 +54,8 @@ function Contact() {
   };
 
   return (
-    <main className="bg-slate-50 min-h-screen overflow-x-hidden">
+    /* AJOUT DU PADDING TOP (pt-20) POUR ÉVITER QUE LE HEADER FIXE NE CACHE LE CONTENU */
+    <main className="bg-slate-50 min-h-screen overflow-x-hidden pt-20">
       
       {/* 1. HEADER ELITE */}
       <section className="relative bg-[#0a192f] pt-32 pb-48 px-6 text-center text-white overflow-hidden">
@@ -218,12 +216,12 @@ function Contact() {
         </div>
       </section>
 
-      {/* 3. MAP SECTION */}
+      {/* 3. MAP SECTION - CORRECTION DU LIEN GOOGLE MAPS */}
       <section className="px-4 md:px-[10%] mb-20">
         <div className="max-w-7xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white">
           <iframe 
             title="Localisation Lyms Services"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3972.33646561214!2d-3.9678825!3d5.3655556!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNcKwMjEnNTYuMCJOIDPCsDU4JzA0LjQiVw!5e0!3m2!1sfr!2sci!4v1620000000000!5m2!1sfr!2sci" 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3972.4346845348883!2d-3.9678149!3d5.3503923!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfc1ed44431e7c5d%3A0x6b87612f00299e5a!2sAnono%2C%20Abidjan!5e0!3m2!1sfr!2sci!4v1710000000000!5m2!1sfr!2sci" 
             width="100%" 
             height="450" 
             style={{ border: 0 }} 
