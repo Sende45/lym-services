@@ -14,13 +14,16 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.3.6",
+    "@tailwindcss/vite": "^4.2.0",
     "axios": "^1.13.2",
+    "framer-motion": "^12.34.2",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-intersection-observer": "^10.0.0",
     "react-router-dom": "^7.11.0",
     "react-select-country-list": "^2.2.3",
+    "tailwindcss": "^4.2.0",
     "world-countries-capitals": "^3.4.0"
   },
   "devDependencies": {

@@ -1,90 +1,78 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, Users, MapPin, Send, Mail, CheckCircle, Bell, ChevronRight } from "lucide-react";
+import { Star, Users, MapPin, Send, Mail, CheckCircle, Bell, ChevronRight, Plane, Globe, Shield } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { db } from "../firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import Simulateur from "../components/Simulateur";
 
-// --- COMPOSANT ANIMATION AU SCROLL ---
-const FadeIn = ({ children, delay = 0 }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const domRef = useRef();
+// --- ANIMATION DE TEXTE (TYPEWRITER) ---
+const TypewriterText = ({ texts }) => {
+  const [index, setIndex] = useState(0);
+  const [subIndex, setSubIndex] = useState(0);
+  const [reverse, setReverse] = useState(false);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(domRef.current);
-        }
-      });
-    }, { threshold: 0.1 });
+    if (subIndex === texts[index].length + 1 && !reverse) {
+      setTimeout(() => setReverse(true), 2000);
+      return;
+    }
+    if (subIndex === 0 && reverse) {
+      setReverse(false);
+      setIndex((prev) => (prev + 1) % texts.length);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      setSubIndex((prev) => prev + (reverse ? -1 : 1));
+    }, reverse ? 75 : 150);
+    return () => clearTimeout(timeout);
+  }, [subIndex, index, reverse, texts]);
 
-    if (domRef.current) observer.observe(domRef.current);
-    return () => observer.disconnect();
-  }, []);
+  return <span className="text-blue-200 border-r-4 border-blue-200 pr-2">{texts[index].substring(0, subIndex)}</span>;
+};
 
+// --- FADE IN AMÉLIORÉ ---
+const FadeIn = ({ children, delay = 0, direction = "up" }) => {
   return (
-    <div
-      ref={domRef}
-      style={{
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
-        transition: `opacity 0.8s ease-out ${delay}s, transform 0.8s ease-out ${delay}s`,
-        willChange: 'opacity, transform'
-      }}
+    <motion.div
+      initial={{ opacity: 0, y: direction === "up" ? 40 : 0, x: direction === "left" ? 40 : 0 }}
+      whileInView={{ opacity: 1, y: 0, x: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.8, delay, ease: [0.21, 0.45, 0.32, 0.9] }}
     >
       {children}
-    </div>
+    </motion.div>
   );
 };
 
-// --- BOUTON DYNAMIQUE ---
+// --- BOUTON PREMIUM ---
 const DynamicButton = ({ children, onClick, primary = false, fullWidth = false, type = "button" }) => {
-  const [isHovered, setIsHovered] = useState(false);
   return (
-    <button 
+    <motion.button
+      whileHover={{ scale: 1.03, y: -2 }}
+      whileTap={{ scale: 0.97 }}
       type={type}
-      onMouseEnter={() => setIsHovered(true)} 
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick} 
-      style={{
-        padding: '16px 32px',
-        borderRadius: '14px',
-        border: 'none',
-        fontWeight: '700',
-        cursor: 'pointer',
-        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        width: fullWidth ? "100%" : "auto",
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '10px',
-        transform: isHovered ? 'scale(1.05) translateY(-2px)' : 'scale(1) translateY(0)',
-        backgroundColor: primary ? (isHovered ? '#1d4ed8' : '#2563eb') : (isHovered ? '#f1f5f9' : '#ffffff'),
-        color: primary ? '#ffffff' : '#2563eb',
-        boxShadow: isHovered ? '0 20px 25px -5px rgba(0, 0, 0, 0.1)' : '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-      }}
+      onClick={onClick}
+      className={`
+        relative overflow-hidden flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-bold transition-all cursor-pointer
+        ${fullWidth ? "w-full" : "w-auto"}
+        ${primary 
+          ? "bg-blue-600 text-white shadow-[0_10px_30px_-10px_rgba(37,99,235,0.5)] hover:bg-blue-700" 
+          : "bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/20"}
+      `}
     >
       {children}
-    </button>
+    </motion.button>
   );
 };
 
 function Home() {
   const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
-  // États pour la newsletter
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const { scrollYProgress } = useScroll();
+  const yRange = useTransform(scrollYProgress, [0, 0.3], [0, -100]);
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
@@ -94,118 +82,151 @@ function Home() {
         email: email,
         dateInscription: serverTimestamp(),
       });
-      const message = `Bonjour Lym Services ! 👋%0A%0AJe m'abonne à la newsletter.%0A%0AEmail : *${email}*`;
       setSuccess(true);
       setTimeout(() => {
-        window.open(`https://wa.me/2250102030405?text=${message}`, "_blank");
+        window.open(`https://wa.me/2250102030405?text=Je m'abonne à la newsletter Lym Services`, "_blank");
         setSuccess(false);
         setEmail("");
       }, 2000);
-    } catch (err) {
-      alert("Erreur réseau");
-    }
+    } catch (err) { console.error(err); }
     setLoading(false);
   };
 
   return (
-    <main style={{ overflowX: 'hidden', backgroundColor: '#f8fafc' }}>
+    <main className="overflow-x-hidden bg-slate-50 min-h-screen">
       
-      {/* 1. HERO SECTION */}
-      <section style={heroStyle}>
-        <FadeIn>
-          <div style={contentStyle}>
-            <h1 style={{ ...heroTitle, fontSize: isMobile ? "42px" : "68px" }}>
-              L'excellence pour<br/>vos projets de voyage
+      {/* 1. HERO SECTION AVEC PARALLAXE */}
+      <section className="relative min-h-[90vh] flex items-center justify-center bg-[#0a192f] pt-20 pb-32 px-6 text-center text-white overflow-hidden">
+        {/* Cercles de lumière animés */}
+        <motion.div style={{ y: yRange }} className="absolute inset-0 z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-400/10 rounded-full blur-[120px]"></div>
+        </motion.div>
+
+        <div className="max-w-5xl mx-auto relative z-10">
+          <FadeIn>
+            <h1 className="text-5xl md:text-8xl font-black mb-8 leading-[1.1] tracking-tighter">
+              L'excellence pour<br/>
+              <TypewriterText texts={["vos Visas", "vos Études", "vos Voyages"]} />
             </h1>
-            <p style={heroSub}>Assistance visa et séjours sur mesure avec Lym Services.</p>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <DynamicButton onClick={() => navigate("/offres")} fullWidth={isMobile}>
-                Explorer les destinations <ChevronRight size={18} />
-                </DynamicButton>
+          </FadeIn>
+          
+          <FadeIn delay={0.2}>
+            <p className="text-xl md:text-2xl mb-12 text-slate-300 max-w-3xl mx-auto font-light leading-relaxed">
+              Plus qu'une agence, votre partenaire stratégique pour une mobilité internationale sans frontières.
+            </p>
+          </FadeIn>
+
+          <FadeIn delay={0.4}>
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+              <DynamicButton primary onClick={() => navigate("/offres")}>
+                Explorer les destinations <ChevronRight size={22} />
+              </DynamicButton>
+              <DynamicButton onClick={() => navigate("/contact")}>
+                Parler à un expert
+              </DynamicButton>
             </div>
-          </div>
-        </FadeIn>
+          </FadeIn>
+        </div>
       </section>
 
-      {/* 2. SIMULATEUR */}
-      <section style={{ marginTop: "-80px", padding: isMobile ? "0 15px" : "0 10%", position: 'relative', zIndex: 10 }}>
-        <FadeIn delay={0.2}>
+      {/* 2. SIMULATEUR FLOATANT */}
+      <section className="relative -mt-24 px-4 md:px-[8%] z-30">
+        <motion.div 
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 1, delay: 0.6 }}
+          className="bg-white rounded-[3rem] shadow-[0_30px_100px_-20px_rgba(0,0,0,0.15)] p-4 md:p-8"
+        >
+          <div className="mb-6 flex items-center gap-3 px-6">
+            <div className="w-3 h-3 rounded-full bg-red-400"></div>
+            <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+            <div className="w-3 h-3 rounded-full bg-green-400"></div>
+            <span className="text-slate-400 text-sm font-mono ml-4 italic underline decoration-blue-500/30">Lym Simulator v2.0</span>
+          </div>
           <Simulateur />
-        </FadeIn>
+        </motion.div>
       </section>
 
-      {/* 3. EXPERTISE */}
-      <section style={{ 
-          display: "flex", 
-          flexDirection: isMobile ? "column" : "row", 
-          gap: "30px", 
-          padding: isMobile ? "60px 20px" : "100px 10%" 
-        }}>
-        <FadeIn delay={0.1}>
-          <div style={cardExpert}>
-            <div style={iconCircle}><Star color="#2563eb" size={30} /></div>
-            <h3 style={expertTitle}>Expertise</h3>
-            <p style={expertText}>10 ans d'accompagnement pour vos visas et voyages.</p>
-          </div>
-        </FadeIn>
+      {/* 3. EXPERTISE AVEC EFFET HOVER 3D */}
+      <section className="py-32 px-6 md:px-[10%] bg-white">
+        <div className="text-center mb-20">
+          <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-4">Pourquoi nous choisir ?</h2>
+          <div className="h-2 w-24 bg-blue-600 mx-auto rounded-full"></div>
+        </div>
         
-        <FadeIn delay={0.3}>
-          <div style={cardExpert}>
-            <div style={iconCircle}><Users color="#2563eb" size={30} /></div>
-            <h3 style={expertTitle}>Proximité</h3>
-            <p style={expertText}>Un conseiller dédié pour chaque étape de votre projet.</p>
-          </div>
-        </FadeIn>
-
-        <FadeIn delay={0.5}>
-          <div style={cardExpert}>
-            <div style={iconCircle}><MapPin color="#2563eb" size={30} /></div>
-            <h3 style={expertTitle}>Réseau</h3>
-            <p style={expertText}>Accès privilégié aux meilleures offres internationales.</p>
-          </div>
-        </FadeIn>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {[
+            { icon: <Globe className="w-10 h-10" />, title: "Présence Mondiale", text: "Un réseau étendu sur 4 continents pour faciliter vos démarches locales.", color: "bg-blue-600" },
+            { icon: <Shield className="w-10 h-10" />, title: "Sécurité Garantie", text: "Vos données et documents sont protégés par les protocoles les plus stricts.", color: "bg-blue-500" },
+            { icon: <Star className="w-10 h-10" />, title: "98% de Succès", text: "Un taux d'approbation exceptionnel pour nos demandes de visas.", color: "bg-blue-400" }
+          ].map((card, i) => (
+            <FadeIn key={i} delay={i * 0.2}>
+              <div className="group relative p-12 rounded-[2.5rem] bg-slate-50 border border-transparent hover:border-blue-100 hover:bg-white transition-all duration-500 hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.05)] overflow-hidden">
+                <div className={`mb-8 w-20 h-20 ${card.color} text-white rounded-2xl flex items-center justify-center shadow-lg transform group-hover:rotate-[10deg] transition-transform`}>
+                  {card.icon}
+                </div>
+                <h3 className="text-2xl font-black mb-4 text-slate-800">{card.title}</h3>
+                <p className="text-slate-500 leading-relaxed">{card.text}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
       </section>
 
-      {/* 4. NEWSLETTER CORRIGÉE */}
-      <section style={{ padding: isMobile ? '40px 20px' : '40px 10%' }}>
-        <FadeIn delay={0.2}>
-            <div style={newsCard}>
-                <Bell size={40} color="#2563eb" style={{ marginBottom: '20px' }} />
-                <h2 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '10px' }}>Ne ratez aucune opportunité</h2>
-                <p style={{ color: '#64748b', marginBottom: '30px' }}>Inscrivez-vous à notre newsletter pour les bourses et promos.</p>
-                
-                {!success ? (
-                  <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '15px', flexDirection: isMobile ? 'column' : 'row', maxWidth: '600px', margin: '0 auto' }}>
-                    <div style={{ flex: 2, display: 'flex', alignItems: 'center', background: '#f1f5f9', padding: '0 20px', borderRadius: '15px' }}>
-                      <Mail color="#94a3b8" size={20} />
-                      <input 
-                        required type="email" placeholder="Votre email..." 
-                        value={email} onChange={(e) => setEmail(e.target.value)}
-                        style={{ border: 'none', background: 'transparent', padding: '18px 10px', width: '100%', outline: 'none' }}
-                      />
-                    </div>
-                    <DynamicButton primary type="submit" fullWidth={isMobile}>
-                      {loading ? "Chargement..." : "S'abonner"} <Send size={18} />
-                    </DynamicButton>
-                  </form>
-                ) : (
-                  <div style={{ color: '#15803d', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <CheckCircle size={24} /> Inscription réussie !
-                  </div>
-                )}
-            </div>
-        </FadeIn>
+      {/* 4. NEWSLETTER GLASSMORPHISM */}
+      <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto relative rounded-[4rem] overflow-hidden bg-blue-900 py-20 px-8">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+          
+          <div className="relative z-10 flex flex-col items-center">
+            <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 5 }} className="mb-8">
+              <Bell size={60} className="text-blue-300" />
+            </motion.div>
+            <h2 className="text-4xl md:text-6xl font-black text-white mb-6 text-center">Restez informé</h2>
+            <p className="text-blue-100 text-xl mb-12 text-center max-w-2xl font-light">
+              Recevez en exclusivité les dernières opportunités de bourses et les alertes promos.
+            </p>
+
+            {!success ? (
+              <form onSubmit={handleSubscribe} className="w-full max-w-2xl flex flex-col md:flex-row gap-4 p-2 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20">
+                <input 
+                  required 
+                  type="email" 
+                  placeholder="votre@email.com" 
+                  className="flex-1 bg-transparent px-6 py-4 outline-none text-white placeholder:text-blue-200 font-medium"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <button className="bg-white text-blue-900 px-10 py-4 rounded-2xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                  {loading ? "..." : "S'abonner"} <Send size={18} />
+                </button>
+              </form>
+            ) : (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-3 bg-green-500 text-white px-10 py-5 rounded-3xl font-bold">
+                <CheckCircle /> Bienvenue dans la communauté !
+              </motion.div>
+            )}
+          </div>
+        </div>
       </section>
 
-      {/* 5. CTA FINAL */}
-      <section style={ctaSection}>
+      {/* 5. CTA FINAL - DARK MODE STYLE */}
+      <section className="py-32 px-6">
         <FadeIn>
-          <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: isMobile ? "32px" : "48px", fontWeight: "900", color: 'white', marginBottom: '20px' }}>Prêt à décoller ?</h2>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <DynamicButton onClick={() => navigate("/contact")} fullWidth={isMobile}>
-                Obtenir mon devis gratuit
+          <div className="bg-slate-900 rounded-[4rem] p-12 md:p-32 text-center relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent"></div>
+            
+            <div className="relative z-10">
+              <span className="inline-block px-6 py-2 bg-blue-600/20 text-blue-400 rounded-full text-sm font-bold tracking-widest uppercase mb-8">Ready to Fly?</span>
+              <h2 className="text-5xl md:text-8xl font-black text-white mb-10 leading-none italic">
+                C'est le moment <br/> de décoller.
+              </h2>
+              <div className="flex flex-col md:flex-row justify-center gap-6">
+                <DynamicButton primary onClick={() => navigate("/contact")}>
+                  Démarrer mon projet <Plane className="ml-2 rotate-45" />
                 </DynamicButton>
+              </div>
             </div>
           </div>
         </FadeIn>
@@ -214,20 +235,5 @@ function Home() {
     </main>
   );
 }
-
-// --- STYLES ---
-const heroStyle = { 
-  background: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)", 
-  padding: "120px 10%", color: "white", textAlign: 'center' 
-};
-const contentStyle = { maxWidth: "900px", margin: "0 auto" };
-const heroTitle = { fontWeight: "900", marginBottom: "20px", lineHeight: "1.1" };
-const heroSub = { fontSize: "20px", marginBottom: "40px", opacity: 0.9 };
-const cardExpert = { flex: 1, textAlign: 'center', background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' };
-const iconCircle = { background: '#eff6ff', width: '70px', height: '70px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' };
-const expertTitle = { fontWeight: '800', marginBottom: '10px', fontSize: '20px' };
-const expertText = { color: '#64748b', fontSize: '15px', lineHeight: '1.5' };
-const ctaSection = { backgroundColor: "#2563eb", padding: "100px 20px" };
-const newsCard = { background: 'white', padding: isMobile => isMobile ? '40px 20px' : '60px', borderRadius: '30px', textAlign: 'center', border: '1px solid #f1f5f9', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' };
 
 export default Home;

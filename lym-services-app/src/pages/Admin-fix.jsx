@@ -6,7 +6,11 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { Send, Search, Archive, RotateCcw, Newspaper, Trash2, PlusCircle, Globe } from "lucide-react";
+import { 
+  Send, Search, Archive, RotateCcw, Newspaper, 
+  Trash2, PlusCircle, Globe, UploadCloud, Loader2, LogOut 
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- COMPOSANT SKELETON ---
 const AdminSkeleton = () => (
@@ -22,17 +26,12 @@ function Admin() {
   const [tarifsList, setTarifsList] = useState([]);
   const [posts, setPosts] = useState([]);
   const [postForm, setPostForm] = useState({ titre: "", contenu: "", image: "" });
+  const [isUploading, setIsUploading] = useState(false);
   
-  // --- STRUCTURE INITIALE ---
   const [tarifForm, setTarifForm] = useState({ 
-    zone: "", 
-    typeSejour: "court_sejour", 
-    tourisme: "", 
-    soins_medicaux: "",
-    affaires: "",
-    etudes: "",
-    immigration: "",
-    travail: ""
+    zone: "", typeSejour: "court_sejour", 
+    tourisme: "", soins_medicaux: "", affaires: "",
+    etudes: "", immigration: "", travail: ""
   });
 
   const [loading, setLoading] = useState(true);
@@ -40,6 +39,9 @@ function Admin() {
   const [showArchives, setShowArchives] = useState(false);
 
   const navigate = useNavigate();
+  
+  // Ta clé API ImgBB intégrée
+  const IMGBB_API_KEY = "35bb74e2910fc59f0f0e4e2ad6c87935"; 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -74,8 +76,36 @@ function Admin() {
     }
   };
 
+  // --- FONCTION UPLOAD IMGBB ---
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPostForm({ ...postForm, image: data.data.url });
+      } else {
+        alert("Erreur ImgBB: " + data.error.message);
+      }
+    } catch (error) {
+      alert("Erreur lors de l'upload vers ImgBB");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleCreatePost = async (e) => {
     e.preventDefault();
+    if (!postForm.image) return alert("Veuillez uploader une image d'abord.");
     try {
       await addDoc(collection(db, "posts"), {
         ...postForm,
@@ -104,12 +134,9 @@ function Admin() {
     } catch (err) { alert("Erreur"); }
   };
 
-  // --- SAUVEGARDE FILTRÉE (PRO) ---
   const handleSaveTarif = async (e) => {
     e.preventDefault();
     const docId = `${tarifForm.zone.toLowerCase().replace(/\s+/g, '_')}_${tarifForm.typeSejour}`;
-    
-    // On ne garde que les prix pertinents selon le type
     const prixFinal = tarifForm.typeSejour === "court_sejour" 
       ? { tourisme: Number(tarifForm.tourisme), soins_medicaux: Number(tarifForm.soins_medicaux), affaires: Number(tarifForm.affaires) }
       : { etudes: Number(tarifForm.etudes), travail: Number(tarifForm.travail), immigration: Number(tarifForm.immigration) };
@@ -121,16 +148,10 @@ function Admin() {
         prix: prixFinal,
         lastUpdate: serverTimestamp()
       });
-      // Reset des champs numériques
-      setTarifForm({ ...tarifForm, tourisme: "", soins_medicaux: "", affaires: "", etudes: "", travail: "", immigration: "" });
+      setTarifForm({ zone: "", typeSejour: "court_sejour", tourisme: "", soins_medicaux: "", affaires: "", etudes: "", travail: "", immigration: "" });
       fetchData();
       alert("✅ Zone mise à jour !");
     } catch (err) { alert("❌ Erreur enregistrement"); }
-  };
-
-  const handleWhatsApp = (nom, pays, type) => {
-    const msg = `Bonjour ${nom}, nous traitons votre demande de ${type} pour ${pays}.`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   const filteredReservations = reservations.filter(r => {
@@ -149,7 +170,7 @@ function Admin() {
             <input type="text" placeholder="Rechercher..." style={searchField} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
         </div>
-        <button onClick={() => signOut(auth)} style={logoutBtn}>Déconnexion</button>
+        <button onClick={() => signOut(auth)} style={logoutBtn}><LogOut size={16}/> Déconnexion</button>
       </header>
 
       <div style={dashboardGrid}>
@@ -169,7 +190,6 @@ function Admin() {
                 <div style={cardHeader}>
                   <div style={{fontWeight: "bold"}}>{res.nomClient}</div>
                   <div style={{display: "flex", gap: "8px"}}>
-                    {!showArchives && <button onClick={() => handleWhatsApp(res.nomClient, res.paysDestination, res.typeVisa)} style={btnWA}><Send size={14}/></button>}
                     <button onClick={() => handleArchiveStatus(res.id, res.statut)} style={res.statut === "Archivé" ? btnRestore : btnDelete}>
                       {res.statut === "Archivé" ? <RotateCcw size={18}/> : <Archive size={18}/>}
                     </button>
@@ -191,13 +211,30 @@ function Admin() {
           </div>
         </section>
 
-        {/* 2. BLOG */}
+        {/* 2. BLOG AVEC UPLOAD IMGBB */}
         <section style={sectionStyle}>
           <h2 style={sectionTitle}><Newspaper size={20}/> Blog</h2>
           <form onSubmit={handleCreatePost} style={formStyle}>
             <input style={inputStyle} placeholder="Titre" value={postForm.titre} onChange={e => setPostForm({...postForm, titre: e.target.value})} required />
-            <textarea style={{...inputStyle, height: '60px'}} placeholder="Contenu..." value={postForm.contenu} onChange={e => setPostForm({...postForm, contenu: e.target.value})} required />
-            <button type="submit" style={publishBtn}><PlusCircle size={16}/> Publier</button>
+            
+            <div style={{ position: 'relative' }}>
+              <input type="file" id="imgUpload" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+              <label htmlFor="imgUpload" style={uploadArea(postForm.image)}>
+                {isUploading ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : postForm.image ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img src={postForm.image} alt="Preview" style={{ width: '40px', height: '40px', borderRadius: '8px', objectCover: 'cover' }} />
+                    <span>Image prête ✅</span>
+                  </div>
+                ) : (
+                  <><UploadCloud size={20}/> Choisir une image</>
+                )}
+              </label>
+            </div>
+
+            <textarea style={{...inputStyle, height: '80px'}} placeholder="Contenu..." value={postForm.contenu} onChange={e => setPostForm({...postForm, contenu: e.target.value})} required />
+            <button type="submit" disabled={isUploading || !postForm.image} style={{...publishBtn, opacity: (isUploading || !postForm.image) ? 0.6 : 1}}><PlusCircle size={16}/> Publier</button>
           </form>
           <div style={{marginTop: '15px', maxHeight: '180px', overflowY: 'auto'}}>
             {posts.map(p => (
@@ -209,84 +246,50 @@ function Admin() {
           </div>
         </section>
 
-        {/* 3. CONFIGURATION TARIFS (DYNAMIQUE PRO) */}
+        {/* 3. CONFIGURATION TARIFS */}
         <section style={sectionStyle}>
-          <h2 style={sectionTitle}><Globe size={20}/> Gestion des Tarifs</h2>
+          <h2 style={sectionTitle}><Globe size={20}/> Gestion Tarifs</h2>
           <form onSubmit={handleSaveTarif} style={formStyle}>
-            <input 
-              style={inputStyle} 
-              placeholder="Nom de la Zone (ex: France, Canada...)" 
-              value={tarifForm.zone} 
-              onChange={e => setTarifForm({...tarifForm, zone: e.target.value})} 
-              required 
-            />
-            
+            <input style={inputStyle} placeholder="Nom Zone" value={tarifForm.zone} onChange={e => setTarifForm({...tarifForm, zone: e.target.value})} required />
             <select style={inputStyle} value={tarifForm.typeSejour} onChange={e => setTarifForm({...tarifForm, typeSejour: e.target.value})}>
               <option value="court_sejour">Court Séjour</option>
               <option value="long_sejour">Long Séjour</option>
             </select>
-
-            {/* CHAMPS CONDITIONNELS */}
-            {tarifForm.typeSejour === "court_sejour" ? (
-              <div style={innerFormBox("#eff6ff")}>
-                <label style={labelStyle}>Tarifs Court Séjour (FCFA)</label>
-                <input style={inputStyle} type="number" placeholder="Tourisme" value={tarifForm.tourisme} onChange={e => setTarifForm({...tarifForm, tourisme: e.target.value})} required />
-                <input style={inputStyle} type="number" placeholder="Soins Médicaux" value={tarifForm.soins_medicaux} onChange={e => setTarifForm({...tarifForm, soins_medicaux: e.target.value})} required />
-                <input style={inputStyle} type="number" placeholder="Affaires" value={tarifForm.affaires} onChange={e => setTarifForm({...tarifForm, affaires: e.target.value})} required />
-              </div>
-            ) : (
-              <div style={innerFormBox("#f5f3ff")}>
-                <label style={labelStyle}>Tarifs Long Séjour (FCFA)</label>
-                <input style={inputStyle} type="number" placeholder="Études" value={tarifForm.etudes} onChange={e => setTarifForm({...tarifForm, etudes: e.target.value})} required />
-                <input style={inputStyle} type="number" placeholder="Travail" value={tarifForm.travail} onChange={e => setTarifForm({...tarifForm, travail: e.target.value})} required />
-                <input style={inputStyle} type="number" placeholder="Immigration" value={tarifForm.immigration} onChange={e => setTarifForm({...tarifForm, immigration: e.target.value})} required />
-              </div>
-            )}
-            
-            <button type="submit" style={{...publishBtn, backgroundColor: '#0f172a'}}>Enregistrer la Zone</button>
+            <AnimatePresence mode="wait">
+              {tarifForm.typeSejour === "court_sejour" ? (
+                <motion.div key="court" initial={{opacity:0}} animate={{opacity:1}} style={innerFormBox("#eff6ff")}>
+                  <label style={labelStyle}>Court Séjour</label>
+                  <input style={inputStyle} type="number" placeholder="Tourisme" value={tarifForm.tourisme} onChange={e => setTarifForm({...tarifForm, tourisme: e.target.value})} required />
+                  <input style={inputStyle} type="number" placeholder="Soins" value={tarifForm.soins_medicaux} onChange={e => setTarifForm({...tarifForm, soins_medicaux: e.target.value})} required />
+                  <input style={inputStyle} type="number" placeholder="Affaires" value={tarifForm.affaires} onChange={e => setTarifForm({...tarifForm, affaires: e.target.value})} required />
+                </motion.div>
+              ) : (
+                <motion.div key="long" initial={{opacity:0}} animate={{opacity:1}} style={innerFormBox("#f5f3ff")}>
+                  <label style={labelStyle}>Long Séjour</label>
+                  <input style={inputStyle} type="number" placeholder="Études" value={tarifForm.etudes} onChange={e => setTarifForm({...tarifForm, etudes: e.target.value})} required />
+                  <input style={inputStyle} type="number" placeholder="Travail" value={tarifForm.travail} onChange={e => setTarifForm({...tarifForm, travail: e.target.value})} required />
+                  <input style={inputStyle} type="number" placeholder="Immigration" value={tarifForm.immigration} onChange={e => setTarifForm({...tarifForm, immigration: e.target.value})} required />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <button type="submit" style={{...publishBtn, backgroundColor: '#0f172a'}}>Enregistrer</button>
           </form>
-
-          <div style={{marginTop: "20px", maxHeight: '250px', overflowY: 'auto'}}>
-             {tarifsList.map(t => (
-               <div key={t.id} style={tarifCardSmall}>
-                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems:'center'}}>
-                   <span style={{fontWeight:'800', fontSize:'13px'}}>{t.zone?.toUpperCase()}</span>
-                   <span style={{...badgeType, backgroundColor: t.typeSejour === 'court_sejour' ? '#dbeafe' : '#f3e8ff', color: t.typeSejour === 'court_sejour' ? '#1e40af' : '#6b21a8'}}>
-                     {t.typeSejour === 'court_sejour' ? 'COURT' : 'LONG'}
-                   </span>
-                 </div>
-                 <div style={{fontSize: '11px', color: '#64748b', marginTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px'}}>
-                   {t.typeSejour === 'court_sejour' ? (
-                     <>
-                        <span>🏖️ Tour: {t.prix?.tourisme?.toLocaleString()}</span>
-                        <span>⚕️ Soins: {t.prix?.soins_medicaux?.toLocaleString()}</span>
-                        <span>💼 Affaires: {t.prix?.affaires?.toLocaleString()}</span>
-                     </>
-                   ) : (
-                     <>
-                        <span>🎓 Études: {t.prix?.etudes?.toLocaleString()}</span>
-                        <span>👷 Travail: {t.prix?.travail?.toLocaleString()}</span>
-                        <span>🌍 Immi: {t.prix?.immigration?.toLocaleString()}</span>
-                     </>
-                   )}
-                 </div>
-                 <button onClick={async () => { if(window.confirm("Supprimer?")) { await deleteDoc(doc(db, "tarifs", t.id)); fetchData(); }}} style={deleteLink}>Supprimer cette zone</button>
-               </div>
-             ))}
-          </div>
         </section>
-
       </div>
     </div>
   );
 }
 
 // --- STYLES ---
+const uploadArea = (hasImg) => ({
+  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+  padding: '15px', border: '2px dashed #e2e8f0', borderRadius: '12px', cursor: 'pointer',
+  backgroundColor: hasImg ? '#f0fdf4' : '#f8fafc', color: hasImg ? '#166534' : '#64748b',
+  fontSize: '12px', fontWeight: 'bold', transition: 'all 0.2s ease'
+});
+
 const innerFormBox = (bg) => ({ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', backgroundColor: bg, borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' });
 const labelStyle = { fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#64748b', marginBottom: '4px' };
-const tarifCardSmall = { padding: '12px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '10px' };
-const badgeType = { fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '900' };
-const deleteLink = { border: 'none', background: 'none', color: '#ef4444', fontSize: '10px', cursor: 'pointer', marginTop: '10px', padding: 0, fontWeight: 'bold' };
 const containerStyle = { padding: "30px", backgroundColor: "#f1f5f9", minHeight: "100vh", fontFamily: "Inter, sans-serif" };
 const headerStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px", backgroundColor: "white", padding: "20px", borderRadius: "20px" };
 const titleStyle = { margin: 0, fontSize: "20px", fontWeight: "900" };
@@ -299,7 +302,6 @@ const cardStyle = { padding: "15px", backgroundColor: "#f8fafc", borderRadius: "
 const cardHeader = { display: "flex", justifyContent: "space-between", marginBottom: "8px" };
 const cardFooter = { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" };
 const cardDetail = { fontSize: "12px", color: "#64748b" };
-const btnWA = { backgroundColor: "#22c55e", color: "white", border: "none", padding: "6px", borderRadius: "6px", cursor: "pointer" };
 const btnDelete = { color: "#94a3b8", background: "none", border: "none", cursor: "pointer" };
 const btnRestore = { color: "#2563eb", background: "none", border: "none", cursor: "pointer" };
 const archiveTabBtn = { backgroundColor:'#f1f5f9', border:'none', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontWeight:'700', color:'#64748b', fontSize: '12px' };
@@ -308,7 +310,7 @@ const blogItem = { display:'flex', alignItems:'center', padding:'10px', borderBo
 const formStyle = { display: "flex", flexDirection: "column", gap: "12px" };
 const inputStyle = { padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0", outline: "none", fontSize: "13px" };
 const publishBtn = { backgroundColor: "#2563eb", color: "white", padding: "12px", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer", display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' };
-const logoutBtn = { backgroundColor: "#fee2e2", color: "#ef4444", padding: "8px 15px", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
+const logoutBtn = { backgroundColor: "#fee2e2", color: "#ef4444", padding: "8px 15px", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer", display: 'flex', alignItems: 'center', gap: '5px' };
 const listContainer = { maxHeight: "600px", overflowY: "auto" };
 const statusBadge = (s) => ({
   backgroundColor: s === "Approuvé" ? "#dcfce7" : s === "En cours" ? "#dbeafe" : "#fef3c7",

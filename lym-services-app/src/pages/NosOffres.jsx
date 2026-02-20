@@ -1,19 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { X, MapPin, Clock, Filter, Globe, ChevronRight, CheckCircle2, ShieldCheck, Zap } from "lucide-react";
+import { X, MapPin, Clock, Filter, Globe, ChevronRight, CheckCircle2, ShieldCheck, Zap, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../firebase";
 import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 
-// --- COMPOSANT SKELETON AMÉLIORÉ ---
+// --- ANIMATIONS CONFIG ---
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.5 } }
+};
+
+// --- COMPOSANT SKELETON ---
 const PriceSkeleton = () => (
-  <div style={skeletonStyle}>
-    <div style={{...skeletonPulse, background: "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)", backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite'}}></div>
-  </div>
+  <div className="w-24 h-6 bg-slate-200 rounded-lg animate-pulse" />
 );
 
 function NosOffres() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOffre, setSelectedOffre] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [tarifsDb, setTarifsDb] = useState([]);
   const [loadingTarifs, setLoadingTarifs] = useState(true);
   const [successOrder, setSuccessOrder] = useState(false);
@@ -44,15 +53,11 @@ function NosOffres() {
     const fetchTarifs = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "tarifs"));
-        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setTarifsDb(data);
+        setTarifsDb(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (err) { console.error(err); }
       finally { setTimeout(() => setLoadingTarifs(false), 800); }
     };
     fetchTarifs();
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const calculerPrixTotal = (continentId, typeVisa) => {
@@ -84,175 +89,193 @@ function NosOffres() {
   const offresFiltrees = offresParContinent.filter(o => continentFilter === "Tous" || o.nom === continentFilter);
 
   return (
-    <div style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      <style>{`
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .hover-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-      `}</style>
-
-      {/* HEADER PREMIUM - REPASSE EN BLEU ROYAL */}
-      <section style={{...headerStyle, padding: isMobile ? "60px 20px 100px" : "80px 10% 120px"}}>
-        <div style={{maxWidth: "800px", margin: "0 auto"}}>
-          <span style={badgeTop}>LYM SERVICES ELITE</span>
-          <h1 style={{...titleStyle, fontSize: isMobile ? "36px" : "54px"}}>Solutions Visas sur Mesure</h1>
-          <p style={subtitleStyle}>Estimation en temps réel et accompagnement diplomatique complet pour vos projets internationaux.</p>
-        </div>
+    <main className="bg-slate-50 min-h-screen pb-20 overflow-x-hidden">
+      
+      {/* 1. HEADER DYNAMIQUE */}
+      <section className="relative bg-[#0a192f] pt-32 pb-48 px-6 text-center text-white overflow-hidden">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-600/20 via-transparent to-transparent pointer-events-none"
+        />
+        
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative z-10 max-w-4xl mx-auto">
+          <span className="inline-block px-4 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-bold tracking-widest uppercase mb-6">
+            Lym Services Elite
+          </span>
+          <h1 className="text-4xl md:text-7xl font-black mb-6 tracking-tighter">
+            Solutions Visas <span className="text-blue-400 font-serif italic">sur mesure</span>
+          </h1>
+          <p className="text-lg md:text-xl text-slate-300 font-light max-w-2xl mx-auto leading-relaxed">
+            Estimation en temps réel et accompagnement diplomatique complet pour vos ambitions mondiales.
+          </p>
+        </motion.div>
       </section>
 
-      {/* SEARCH BAR FLOTTANTE */}
-      <div style={{...searchWrapper, padding: isMobile ? "0 15px" : "0 10%"}}>
-        <div style={searchFormCard}>
-          <div style={{display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: "20px"}}>
-            <SearchField label="Destination" icon={<Globe size={18} color="#2563eb"/>} placeholder="Ex: Canada, France..." onChange={(e) => setPaysSelectionne(e.target.value)} />
-            <SearchSelect label="Continent" icon={<MapPin size={18}/>} options={continents} onChange={(e) => setContinentFilter(e.target.value)} />
-            <SearchSelect label="Durée" icon={<Clock size={18}/>} options={categoriesDuree} onChange={(e) => {setDureeFilter(e.target.value); setTypeVisaFilter(visasParDuree[e.target.value][0]);}} />
+      {/* 2. BARRE DE RECHERCHE FLOTTANTE (GLASSMORPHISM) */}
+      <section className="relative -mt-24 px-4 md:px-[10%] z-20">
+        <motion.div 
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] p-8 border border-white"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <SearchInput label="Destination" icon={<Search size={18}/>} placeholder="Ex: Canada..." onChange={(e) => setPaysSelectionne(e.target.value)} />
+            <SearchSelect label="Continent" icon={<Globe size={18}/>} options={continents} onChange={(e) => setContinentFilter(e.target.value)} />
+            <SearchSelect label="Durée" icon={<Clock size={18}/>} options={categoriesDuree} onChange={(e) => {
+                setDureeFilter(e.target.value); 
+                setTypeVisaFilter(visasParDuree[e.target.value][0]);
+            }} />
             <SearchSelect label="Type de Visa" icon={<Filter size={18}/>} value={typeVisaFilter} options={visasParDuree[dureeFilter]} onChange={(e) => setTypeVisaFilter(e.target.value)} />
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </section>
 
-      {/* GRILLE D'OFFRES */}
-      <div style={{...gridStyle, padding: isMobile ? "40px 20px" : "60px 10%"}}>
+      {/* 3. GRILLE DES OFFRES */}
+      <motion.section 
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-10 px-6 md:px-[10%] pt-24"
+      >
         {offresFiltrees.map((zone) => {
           const prixZone = calculerPrixTotal(zone.id, typeVisaFilter);
           return (
-            <div key={zone.id} className="hover-card" style={{...cardStyle, transition: 'all 0.3s ease'}}>
-              <div style={{position: 'relative', height: '220px', overflow: 'hidden'}}>
-                <img src={zone.img} alt={zone.nom} style={imgStyle} />
-                <div style={overlayPrice}>
-                   <Zap size={14} /> Traitement Express
+            <motion.div 
+              key={zone.id}
+              variants={itemVariants}
+              whileHover={{ y: -10 }}
+              className="group bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500"
+            >
+              <div className="relative h-64 overflow-hidden">
+                <img src={zone.img} alt={zone.nom} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 text-[10px] font-black text-green-600 shadow-sm">
+                   <Zap size={12} /> TRAITEMENT EXPRESS
                 </div>
               </div>
-              <div style={{ padding: "24px" }}>
-                <h3 style={{ margin: "0 0 10px 0", fontSize: "22px", fontWeight: "800" }}>{zone.nom}</h3>
-                <p style={{color: "#64748b", fontSize: "14px", marginBottom: "20px", height: "42px"}}>{zone.description}</p>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-                  <span style={{fontSize: '14px', color: '#94a3b8'}}>À partir de</span>
-                  {loadingTarifs ? <PriceSkeleton /> : <span style={priceTag}>{prixZone > 0 ? `${prixZone.toLocaleString()} FCFA` : "Sur devis"}</span>}
+              
+              <div className="p-8">
+                <h3 className="text-2xl font-black text-slate-900 mb-2">{zone.nom}</h3>
+                <p className="text-slate-500 text-sm mb-6 leading-relaxed h-12">{zone.description}</p>
+                
+                <div className="flex items-center justify-between mb-8 p-4 bg-slate-50 rounded-2xl">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">À partir de</span>
+                  {loadingTarifs ? <PriceSkeleton /> : (
+                    <span className="text-xl font-black text-blue-600">
+                      {prixZone > 0 ? `${prixZone.toLocaleString()} FCFA` : "Sur devis"}
+                    </span>
+                  )}
                 </div>
+
                 <button 
-                  onClick={() => { setSelectedOffre(zone); setIsModalOpen(true); }} 
-                  style={{...btnDetails, background: paysSelectionne ? "#2563eb" : "#cbd5e1"}}
                   disabled={!paysSelectionne}
+                  onClick={() => { setSelectedOffre(zone); setIsModalOpen(true); }}
+                  className={`w-full py-5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
+                    paysSelectionne 
+                    ? "bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700 hover:-translate-y-1" 
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  }`}
                 >
-                  {paysSelectionne ? `Postuler pour le ${paysSelectionne}` : "Précisez votre destination"} <ChevronRight size={18} />
+                  {paysSelectionne ? `Partir en ${paysSelectionne}` : "Précisez votre destination"}
+                  <ChevronRight size={20} />
                 </button>
               </div>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.section>
 
-      {/* MODAL PREMIUM */}
-      {isModalOpen && (
-        <div style={modalOverlay}>
-          <div style={modalContent}>
-            {successOrder ? (
-              <div style={{padding: "60px 40px", textAlign: "center"}}>
-                <CheckCircle2 size={80} color="#059669" style={{marginBottom: "20px"}} />
-                <h2 style={{fontSize: "24px", fontWeight: "900"}}>Demande Enregistrée !</h2>
-                <p style={{color: "#64748b"}}>Un conseiller Lym Services vous contactera dans moins de 24h.</p>
-              </div>
-            ) : (
-              <div style={{padding: "30px"}}>
-                <div style={{display:'flex', justifyContent:'space-between', marginBottom: "25px"}}>
-                  <div>
-                    <h2 style={{fontSize: '24px', fontWeight: "900", margin: 0}}>{paysSelectionne}</h2>
-                    <span style={{color: "#2563eb", fontSize: "14px", fontWeight: "600"}}>{typeVisaFilter} • {dureeFilter}</span>
+      {/* 4. MODAL ANIMÉ (ANIMEPRESENCE) */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl shadow-black/50"
+            >
+              {successOrder ? (
+                <div className="p-16 text-center">
+                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle2 size={40} />
                   </div>
-                  <button onClick={() => setIsModalOpen(false)} style={{border:'none', background:'#f1f5f9', borderRadius: "50%", padding: "8px", cursor:'pointer'}}><X size={20}/></button>
+                  <h2 className="text-3xl font-black text-slate-900 mb-2">Demande Reçue !</h2>
+                  <p className="text-slate-500">Un expert Lym Services vous rappellera sous 24h.</p>
                 </div>
-                
-                <div style={priceHighlightCard}>
-                  <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-                    <div>
-                      <span style={{fontSize: "12px", opacity: 0.8, textTransform: "uppercase", fontWeight: "700"}}>Frais de dossier estimés</span>
-                      <div style={{fontSize: "32px", fontWeight: "900", marginTop: "5px"}}>
-                        {calculerPrixTotal(selectedOffre.id, typeVisaFilter).toLocaleString()} <span style={{fontSize: "16px"}}>FCFA</span>
+              ) : (
+                <div className="relative">
+                  <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
+                    <X size={20} />
+                  </button>
+                  
+                  <div className="p-10">
+                    <div className="mb-8">
+                      <h2 className="text-3xl font-black text-slate-900">{paysSelectionne}</h2>
+                      <div className="flex gap-2 mt-2">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase">{typeVisaFilter}</span>
+                        <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold uppercase">{dureeFilter}</span>
                       </div>
                     </div>
-                    <ShieldCheck size={40} opacity={0.3} />
+
+                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-8 text-white mb-8 relative overflow-hidden">
+                      <ShieldCheck className="absolute -right-4 -bottom-4 w-32 h-32 opacity-10 rotate-12" />
+                      <span className="text-[10px] font-bold tracking-widest opacity-80 uppercase">Estimation Elite</span>
+                      <div className="text-4xl font-black mt-2">
+                        {calculerPrixTotal(selectedOffre.id, typeVisaFilter).toLocaleString()} <span className="text-lg font-light">FCFA</span>
+                      </div>
+                      <p className="text-xs text-blue-100 mt-4 font-medium flex items-center gap-2">
+                        <Zap size={12} className="text-amber-400" /> Frais de dossier & assistance inclus
+                      </p>
+                    </div>
+
+                    <form onSubmit={handleReservation} className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identité du voyageur</label>
+                        <input required type="text" placeholder="Nom et prénoms complets" className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 ring-blue-500/20 focus:bg-white transition-all font-semibold" />
+                      </div>
+                      <button type="submit" className="w-full py-6 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">
+                        Confirmer ma demande
+                      </button>
+                    </form>
                   </div>
                 </div>
-
-                <form onSubmit={handleReservation} style={{display: "flex", flexDirection: "column", gap: "20px"}}>
-                  <div style={inputBox}>
-                    <label style={labelForm}>NOM COMPLET DU RÉQUÉRANT</label>
-                    <input type="text" placeholder="Ex: Jean Kouassi" style={fInput} required />
-                  </div>
-                  <button type="submit" style={btnConfirm}>Confirmer ma demande de visa</button>
-                  <p style={{textAlign: "center", fontSize: "12px", color: "#94a3b8"}}>En confirmant, vous acceptez d'être recontacté par nos experts.</p>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
   );
 }
 
-// --- SOUS-COMPOSANTS DE STYLE ---
-const SearchField = ({label, icon, placeholder, onChange}) => (
-  <div style={inputBox}>
-    <label style={labelS}>{label}</label>
-    <div style={innerInput}>{icon}<input type="text" placeholder={placeholder} style={cleanInput} onChange={onChange} /></div>
+// --- SOUS-COMPOSANTS (INTERNAL) ---
+const SearchInput = ({ label, icon, placeholder, onChange }) => (
+  <div className="flex flex-col gap-2">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus-within:ring-2 ring-blue-500/20 transition-all">
+      <span className="text-blue-500">{icon}</span>
+      <input type="text" placeholder={placeholder} onChange={onChange} className="bg-transparent w-full outline-none font-semibold text-slate-700" />
+    </div>
   </div>
 );
 
-const SearchSelect = ({label, icon, options, onChange, value}) => (
-  <div style={inputBox}>
-    <label style={labelS}>{label}</label>
-    <div style={innerInput}>{icon}
-      <select style={cleanInput} value={value} onChange={onChange}>
+const SearchSelect = ({ label, icon, options, onChange, value }) => (
+  <div className="flex flex-col gap-2">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl focus-within:ring-2 ring-blue-500/20 transition-all">
+      <span className="text-slate-400">{icon}</span>
+      <select value={value} onChange={onChange} className="bg-transparent w-full outline-none font-semibold text-slate-700 cursor-pointer">
         {options.map((o, i) => <option key={i} value={o}>{o}</option>)}
       </select>
     </div>
   </div>
 );
-
-// --- STYLES MODIFIÉS ---
-const badgeTop = { 
-  background: "rgba(255,255,255,0.2)", 
-  padding: "8px 16px", 
-  borderRadius: "100px", 
-  fontSize: "12px", 
-  fontWeight: "700", 
-  letterSpacing: "1px", 
-  marginBottom: "20px", 
-  display: "inline-block", 
-  border: "1px solid rgba(255,255,255,0.3)",
-  color: "white"
-};
-
-const headerStyle = { 
-  background: "linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)", 
-  color: "white", 
-  textAlign: "center" 
-};
-
-// --- AUTRES STYLES ---
-const overlayPrice = { position: "absolute", top: "15px", left: "15px", background: "white", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: "800", color: "#059669", display: "flex", alignItems: "center", gap: "5px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" };
-const labelForm = { fontSize: "11px", color: "#1e293b", fontWeight: "800", letterSpacing: "0.5px" };
-const skeletonStyle = { width: "120px", height: "24px", borderRadius: "8px", overflow: "hidden" };
-const skeletonPulse = { width: "100%", height: "100%" };
-const priceHighlightCard = { background: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)", color: "white", padding: "25px", borderRadius: "24px", marginBottom: "25px" };
-const titleStyle = { fontWeight: "900", margin: 0, letterSpacing: "-1px" };
-const subtitleStyle = { fontSize: "18px", opacity: 0.8, marginTop: "20px", lineHeight: "1.6" };
-const searchWrapper = { marginTop: "-60px", zIndex: 100, position: "relative" };
-const searchFormCard = { backgroundColor: "white", borderRadius: "24px", padding: "30px", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.15)", border: "1px solid #e2e8f0" };
-const inputBox = { display: "flex", flexDirection: "column", gap: "8px" };
-const labelS = { fontSize: "11px", fontWeight: "900", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1px" };
-const innerInput = { display: "flex", alignItems: "center", gap: "12px", backgroundColor: "#f8fafc", padding: "14px", borderRadius: "14px", border: "1px solid #e2e8f0" };
-const cleanInput = { border: "none", outline: "none", width: "100%", fontSize: "15px", fontWeight: "600", background: "transparent" };
-const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "40px" };
-const cardStyle = { backgroundColor: "white", borderRadius: "32px", overflow: "hidden", border: "1px solid #e2e8f0" };
-const imgStyle = { width: "100%", height: "100%", objectFit: "cover" };
-const priceTag = { color: "#2563eb", fontWeight: "900", fontSize: "22px" };
-const btnDetails = { width: "100%", color: "white", padding: "18px", border: "none", borderRadius: "18px", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", transition: "0.3s" };
-const modalOverlay = { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(15, 23, 42, 0.85)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999, backdropFilter: "blur(8px)" };
-const modalContent = { backgroundColor: "white", borderRadius: "40px", width: "95%", maxWidth: "500px", boxShadow: "0 30px 60px -12px rgba(0,0,0,0.3)" };
-const fInput = { padding: "18px", borderRadius: "16px", border: "1px solid #e2e8f0", outline: "none", fontSize: "16px", backgroundColor: "#f8fafc" };
-const btnConfirm = { backgroundColor: "#2563eb", color: "white", padding: "20px", borderRadius: "18px", border: "none", fontWeight: "900", fontSize: "16px", cursor: "pointer", boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.3)" };
 
 export default NosOffres;
